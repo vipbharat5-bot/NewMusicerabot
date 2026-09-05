@@ -1,6 +1,8 @@
 import os
 import sqlite3
 import asyncio
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.constants import ChatType
@@ -126,9 +128,25 @@ async def play(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔎 Music request received: {query}\n\n"
         "Voice-chat playback module will be added in the next step."
     )
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"NewMusicerabot is running!")
 
+    def log_message(self, format, *args):
+        pass
+
+
+def start_health_server():
+    port = int(os.environ.get("PORT", "10000"))
+    server = ThreadingHTTPServer(("0.0.0.0", port), HealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    print(f"Health server running on port {port}")
 def main():
     db()
+    start_health_server()
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
